@@ -1,8 +1,8 @@
 """
 Script to create test data for the multi-tenant e-commerce system.
-Run: python manage.py shell < create_test_data.py
+Run: python manage.py shell < scripts/create_test_data.py
 Or: python manage.py shell
-     exec(open('create_test_data.py').read())
+     exec(open('scripts/create_test_data.py').read())
 """
 
 from core.models import Tenant, User, Product, Order, OrderItem

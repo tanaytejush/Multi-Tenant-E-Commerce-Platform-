@@ -23,6 +23,11 @@ A multi-tenant e-commerce backend built with Django and Django REST Framework. S
 - **django-cors-headers 4.9** - CORS support
 - **SQLite** (default, easily configurable for PostgreSQL/MySQL)
 
+## Documentation
+
+- **[Quick Start Guide](docs/QUICK_START.md)** - Get started quickly with pre-configured test data
+- **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Detailed implementation guide and architecture
+
 ## Project Structure
 
 ```
@@ -40,7 +45,13 @@ multitenant_ecommerce/
 │   ├── settings.py                # Django settings
 │   ├── urls.py                    # Root URL configuration
 │   └── wsgi.py                    # WSGI configuration
-├── manage.py                      # Django management script
+├── docs/                          # Documentation
+│   ├── QUICK_START.md             # Quick start guide
+│   └── IMPLEMENTATION_SUMMARY.md  # Implementation details
+├── scripts/                       # Utility scripts
+│   ├── create_test_data.py        # Create sample test data
+│   └── test_api.py                # API testing script
+├── manage.py                      # Django management script (MUST be in root)
 ├── requirements.txt               # Python dependencies
 ├── .env                           # Environment variables
 ├── .env.example                   # Example environment variables
@@ -469,7 +480,13 @@ The user's role is stored in the JWT token, so it's available on every request. 
 
 ### Create Test Data
 
-You can create test data using Django shell or admin interface:
+Use the provided test data script for quick setup:
+
+```bash
+python manage.py shell < scripts/create_test_data.py
+```
+
+Or create test data manually using Django shell or admin interface:
 
 ```bash
 python manage.py shell

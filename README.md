@@ -1,6 +1,6 @@
 # Multi-Tenant E-commerce Backend
 
-A robust multi-tenant e-commerce backend built with Django and Django REST Framework, featuring JWT authentication, role-based access control, and complete tenant isolation.
+A multi-tenant e-commerce backend built with Django and Django REST Framework. Supports JWT authentication, role-based access control, and keeps each tenant's data completely separate.
 
 ## Features
 
@@ -384,36 +384,31 @@ Content-Type: application/json
 
 ## Multi-Tenancy Implementation
 
-### Architecture Overview
+### How It Works
 
-The multi-tenancy implementation uses a **shared database with row-level isolation** approach. This means all tenants share the same database and tables, but data is isolated using a `tenant` foreign key.
+I went with a shared database approach where all tenants use the same database and tables, but their data is kept separate using a `tenant` foreign key. It's simpler to manage than having separate databases for each tenant.
 
-### Key Components
+### Main Components
 
-#### 1. Tenant Model
-- Stores vendor information (store_name, domain, subdomain, contact details)
-- Each tenant represents a separate vendor/store
-- All business data (products, orders, users) references a tenant
+**Tenant Model**
+The Tenant model stores basic vendor info like store name, domain, subdomain, and contact details. Each tenant is basically a separate vendor/store, and everything else (products, orders, users) links back to it.
 
-#### 2. Custom User Model
-- Extends Django's `AbstractUser`
-- Includes `tenant` foreign key and `role` field
-- Three roles: STORE_OWNER, STAFF, CUSTOMER
+**User Model**
+Extended Django's default User model to add a `tenant` foreign key and a `role` field. There are three roles: Store Owner, Staff, and Customer.
 
-#### 3. Tenant Middleware (`core/middleware.py`)
-- Extracts `tenant_id` and `role` from JWT token
-- Attaches them to the request object
-- Makes every request tenant-aware
+**Tenant Middleware**
+There's middleware in `core/middleware.py` that pulls the tenant_id and role from the JWT token on each request and attaches it to the request object. This way every request knows which tenant it belongs to.
 
-#### 4. Custom JWT Serializer
-- Adds custom claims to JWT token:
-  - `tenant_id`: Identifies which tenant the user belongs to
-  - `role`: User's role (STORE_OWNER, STAFF, CUSTOMER)
-  - `username`, `email`: Additional user info
-- Located in `core/serializers.py` (`CustomTokenObtainPairSerializer`)
+**JWT Token Setup**
+The JWT tokens include custom claims:
+- `tenant_id` - which tenant the user belongs to
+- `role` - what they can do (Store Owner, Staff, or Customer)
+- Plus username and email
 
-#### 5. Tenant-Aware Querysets
-All ViewSets automatically filter data by tenant:
+You can find this in `core/serializers.py` (look for `CustomTokenObtainPairSerializer`).
+
+**Filtering Data**
+All the ViewSets filter data by tenant automatically. For example:
 ```python
 def get_queryset(self):
     user = self.request.user
@@ -421,8 +416,8 @@ def get_queryset(self):
     return queryset
 ```
 
-#### 6. Automatic Tenant Assignment
-When creating new objects, the tenant is automatically set:
+**Creating New Data**
+When you create something new (like a product or order), the tenant is set automatically:
 ```python
 def perform_create(self, serializer):
     serializer.save(
@@ -431,35 +426,28 @@ def perform_create(self, serializer):
     )
 ```
 
-### Data Isolation Guarantees
+### Data Isolation
 
-1. **Query-Level Isolation**: All database queries are automatically filtered by tenant
-2. **Permission-Level Isolation**: Custom permissions ensure users can only access their tenant's data
-3. **Creation-Level Isolation**: New objects are automatically assigned to the user's tenant
-4. **Token-Level Isolation**: JWT tokens include tenant_id, preventing cross-tenant access
+The data is isolated at multiple levels:
+- Database queries are filtered by tenant automatically
+- Permissions check that users can only access their own tenant's data
+- New objects get assigned to the user's tenant
+- JWT tokens include the tenant_id to prevent any cross-tenant access
 
 ## Role-Based Access Control
 
-### Implementation
+### How Permissions Work
 
-Role-based access is implemented through:
+There are custom permission classes in `core/permissions.py`:
+- `IsTenantUser` - checks that the user belongs to a tenant
+- `IsStoreOwner` - only allows store owners
+- `IsStoreOwnerOrStaff` - allows both store owners and staff
+- `TenantProductPermission` - handles product access based on role
+- `TenantOrderPermission` - handles order access based on role
 
-1. **Custom Permission Classes** (`core/permissions.py`):
-   - `IsTenantUser`: Ensures user belongs to a tenant
-   - `IsStoreOwner`: Only store owners
-   - `IsStoreOwnerOrStaff`: Store owners and staff
-   - `TenantProductPermission`: Role-specific product access
-   - `TenantOrderPermission`: Role-specific order access
+These permissions are applied to the ViewSets using `permission_classes`. They check permissions before any database queries run, at both the view level and object level.
 
-2. **View-Level Permissions**:
-   - Applied as `permission_classes` on ViewSets
-   - Evaluated before any query execution
-   - Provide both object-level and view-level checks
-
-3. **JWT Token Claims**:
-   - Role is embedded in JWT token
-   - Available on every authenticated request
-   - Used by permission classes to make decisions
+The user's role is stored in the JWT token, so it's available on every request. The permission classes use this to decide what the user can and can't do.
 
 ### Permission Matrix
 
@@ -527,39 +515,41 @@ Features:
 - Inline order item management
 - Custom user admin with tenant information
 
-## Security Considerations
+## Security Notes
 
-1. **JWT Token Security**:
-   - Tokens expire after 1 hour
-   - Refresh tokens valid for 7 days
-   - Use HTTPS in production
+A few things to keep in mind:
 
-2. **Password Security**:
-   - Django's password validation enabled
-   - Passwords hashed using PBKDF2
+**Tokens**
+- Access tokens expire after 1 hour
+- Refresh tokens are valid for 7 days
+- Always use HTTPS in production
 
-3. **CORS**:
-   - Configure `CORS_ALLOW_ALL_ORIGINS = False` in production
-   - Specify allowed origins
+**Passwords**
+- Using Django's built-in password validation
+- Passwords are hashed with PBKDF2
 
-4. **Environment Variables**:
-   - Never commit `.env` file
-   - Use strong SECRET_KEY in production
+**CORS**
+- Right now CORS is set to allow all origins for development
+- In production, set `CORS_ALLOW_ALL_ORIGINS = False` and specify your actual frontend domain
+
+**Environment Variables**
+- Don't commit the `.env` file to git
+- Use a strong SECRET_KEY in production (not the default one)
 
 ## Production Deployment
 
-For production deployment:
+Before deploying to production, you'll want to:
 
-1. Set `DEBUG=False` in `.env`
-2. Configure proper database (PostgreSQL recommended)
-3. Set up proper SECRET_KEY
-4. Configure ALLOWED_HOSTS
-5. Set up static file serving
-6. Use HTTPS
-7. Configure CORS properly
-8. Set up proper logging
-9. Use production-grade server (Gunicorn, uWSGI)
-10. Set up reverse proxy (Nginx)
+- Set `DEBUG=False` in `.env`
+- Switch to a proper database like PostgreSQL
+- Use a strong SECRET_KEY
+- Configure ALLOWED_HOSTS
+- Set up static file serving
+- Use HTTPS
+- Fix CORS settings (don't use ALLOW_ALL in production)
+- Add logging
+- Use a production server like Gunicorn or uWSGI
+- Set up a reverse proxy (Nginx)
 
 ## License
 

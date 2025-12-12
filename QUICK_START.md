@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-## 1. Setup (5 minutes)
+## Setup
 
 ```bash
 # Clone the repository

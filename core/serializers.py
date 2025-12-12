@@ -103,6 +103,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
+
+        # Set initial total_amount to 0
+        validated_data['total_amount'] = 0
         order = Order.objects.create(**validated_data)
 
         total = 0

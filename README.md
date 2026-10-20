@@ -575,3 +575,8 @@ This project is provided for educational and evaluation purposes.
 ## Support
 
 For issues, questions, or contributions, please contact the development team.
+
+
+---
+
+<sub>Made by [tanaytejush](https://github.com/tanaytejush)</sub>
